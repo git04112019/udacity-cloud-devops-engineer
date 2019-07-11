@@ -58,7 +58,6 @@ Resources:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
       AssociatePublicIpAddress: false
-      IamInstanceProfile: arn:aws:iam::097663763148:instance-profile/RoleForEC2
       # The home grown image that already have HTTPD installed on it
       ImageId: ami-0be42816e95d0882b
       IamInstanceProfile:
@@ -66,7 +65,6 @@ Resources:
       EbsOptimized: false
       InstanceMonitoring: false
       InstanceType: t2.medium
-      KeyName: udacity-key
       SecurityGroups:
         - Ref: WebServerSecGroup
       UserData:
