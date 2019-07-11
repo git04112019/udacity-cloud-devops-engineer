@@ -1,0 +1,339 @@
+Description: >
+    Abid Malik - Udacity Cloud DevOps Engineer Nanodegree program
+# Parameters section    
+Parameters:
+# Default CIDR for VPC & Subnets
+  VPCCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: Default CIDR range for VPC
+# CIDR range for Public Subnet in AZ 2a   
+  PublicSubnetACIDR:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: CIDR range for Public Subnet in AZ 2a 
+# CIDR range for Public Subnet in AZ 2b 
+  PublicSubnetBCIDR:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: CIDR range for Public Subnet in AZ 2b
+# CIDR range for Private Subnet in AZ 2a  
+  PrivateSubnetACIDR:
+    Type: String
+    Default: 10.0.10.0/24
+    Description: CIDR range for Private Subnet in AZ 2a
+# CIDR range for Private Subnet in AZ 2b
+  PrivateSubnetBCIDR:
+    Type: String
+    Default: 10.0.20.0/24
+    Description: CIDR range for Private Subnet in AZ 2b    
+# AWS Resources sections         
+
+##### VPC & INTERNET GATEWAY #####
+Resources:
+  # VPC: PRODVPC
+  PRODVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock:
+        Ref: VPCCIDR
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: PROD-VPC
+  # INTERNET GATEWAY : PRODIGW                
+  PRODIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: PROD-IGW
+  # INTERNET GATEWAY - VPC ATTACHMENT        
+  InternetGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: 
+        Ref: PRODVPC
+      InternetGatewayId:
+        Ref: PRODIGW
+#################### SUBNETS ###################
+  # PUBLIC SUBNET 1 - PublicSubnetA(10.0.1.0/24)       
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: ''
+      VpcId:
+        Ref: PRODVPC
+      CidrBlock:
+        Ref: PublicSubnetACIDR
+      Tags:
+        - Key: Name
+          Value: PROD-Public-SubnetA
+
+  # PUBLIC SUBNET 2 - PublicSubnetB(10.0.2.0/24)       
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs: ''
+      VpcId:
+        Ref: PRODVPC
+      CidrBlock:
+        Ref: PublicSubnetBCIDR
+      Tags:
+        - Key: Name
+          Value: PROD-Public-SubnetB
+  # PRIVATE SUBNET 1 - PrivateSubnetA(10.0.10.0/24)
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: false
+      AvailabilityZone:
+        Fn::Select:
+        - 0
+        - Fn::GetAZs: ''
+      VpcId:
+        Ref: PRODVPC
+      CidrBlock:
+        Ref: PrivateSubnetACIDR
+      Tags:
+        - Key: Name
+          Value: PROD-Private-SubnetA
+  # PRIVATE SUBNET 2 - PrivateSubnetB(10.0.20.0/24)
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      MapPublicIpOnLaunch: false
+      AvailabilityZone:
+        Fn::Select:
+        - 1
+        - Fn::GetAZs: ''
+      VpcId:
+        Ref: PRODVPC
+      CidrBlock:
+        Ref: PrivateSubnetBCIDR
+      Tags:
+        - Key: Name
+          Value: PROD-Private-SubnetB
+  # ROUTE TABLES Public A+B, Private A+B #####
+  # PUBLIC Route Table: PublicRouteTable      
+  PublicRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+       Ref: PRODVPC
+      Tags:
+        - Key: Name
+          Value: PROD-Public-Route-TableA
+  PublicRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+       Ref: PRODVPC
+      Tags:
+        - Key: Name
+          Value: PROD-Public-Route-TableB              
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+       Ref: PRODVPC
+      Tags:
+        - Key: Name
+          Value: PROD-Private-Route-TableA
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+       Ref: PRODVPC
+      Tags:
+        - Key: Name
+          Value: PROD-Private-Route-TableB        
+  # Public Route Table Rule to Internet       
+  PublicRouteToInternetA:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        RouteTableId:
+          Ref: PublicRouteTableA
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: PRODIGW
+  PublicRouteToInternetB:
+      Type: AWS::EC2::Route
+      DependsOn: InternetGatewayAttachment
+      Properties:
+        RouteTableId:
+          Ref: PublicRouteTableB
+        DestinationCidrBlock: 0.0.0.0/0
+        GatewayId:
+          Ref: PRODIGW
+
+  # Public Subnet to Route Table Association
+  PublicAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetA
+      RouteTableId:
+        Ref: PublicRouteTableA
+  PublicAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PublicSubnetB
+      RouteTableId:
+        Ref: PublicRouteTableB
+  # Private Subnet to Route Table Association
+  PrivateAssociationA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetA
+      RouteTableId:
+        Ref: PrivateRouteTableA
+  PrivateAssociationB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: PrivateSubnetB
+      RouteTableId:
+        Ref: PrivateRouteTableB
+
+  ### NAT Gateway and Routing ###
+  # Punblic Elastic IPs for NAT Gateway
+  EIPA:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties: 
+      Domain: vpc
+
+  EIPB:
+    Type: AWS::EC2::EIP
+    DependsOn: InternetGatewayAttachment
+    Properties:
+      Domain: vpc
+  NATA:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt: [EIPA, AllocationId]
+      SubnetId:
+        Ref: PublicSubnetA
+      Tags:
+        - Key: Name
+          Value: PROD-NATA
+  NATB:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId:
+        Fn::GetAtt: [EIPB, AllocationId]
+      SubnetId:
+        Ref: PublicSubnetB
+      Tags:
+        - Key: Name
+          Value: PROD-NATB 
+  # PRIVATE ROUTE TABLE ROUTE THROUGH NAT1 & NAT2 #
+  NATARoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: PrivateRouteTableA
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId:
+          Ref: NATA
+  NATBRoute:
+      Type: AWS::EC2::Route
+      Properties:
+        RouteTableId:
+          Ref: PrivateRouteTableB
+        DestinationCidrBlock: 0.0.0.0/0
+        NatGatewayId:
+          Ref: NATB        
+  
+  ####### OUTPUT SECTION #####
+Outputs:
+  PRODVPC:
+   Description: Reference to our created VPC
+   Value:
+    Ref: PRODVPC
+   Export: 
+    Name: PROD-VPC 
+  PRODIGW:
+   Description: Reference to our Internet Gateway
+   Value:
+    Ref: PRODIGW
+   Export:
+    Name: PROD-IGW
+  PublicRouteTableA:
+   Description: Reference to our Public Route Table
+   Value:
+    Ref: PublicRouteTableA
+   Export:
+    Name: PROD-Public-Route-TableA
+  PublicRouteTableB:
+   Description: Reference to our Public Route Table
+   Value:
+    Ref: PublicRouteTableB
+   Export:
+    Name: PROD-Public-Route-TableB  
+
+  PrivateRouteTableA:
+   Description: Reference to our Private Route Table
+   Value:
+    Ref: PublicRouteTableA
+   Export:
+    Name: PROD-Private-Route-TableA
+  PrivateRouteTableB:
+   Description: Reference to our Private Route Table
+   Value:
+    Ref: PublicRouteTableB
+   Export:
+    Name: PROD-Private-Route-TableB  
+
+
+  PublicSubnets:
+   Description: Reference to our Public Subnets
+   Value:
+    Fn::Join: [",", [ Ref: PublicSubnetA, Ref: PublicSubnetB ]]
+   Export:
+    Name: PublicSubnets    
+  PrivateSubnets:
+   Description: Reference to our Private Subnets
+   Value:
+    Fn::Join: [",", [ Ref: PrivateSubnetA, Ref: PrivateSubnetB ]]
+   Export:
+    Name: PrivateSubnets 
+  PublicSubnetA:
+   Description: Reference to our Public Subnet in Zone A
+   Value:
+    Ref: PublicSubnetA
+   Export:
+    Name: PROD-Public-SubnetA     
+  PublicSubnetB:
+   Description: Reference to our Public Subnet in Zone B
+   Value:
+    Ref: PublicSubnetB
+   Export:
+    Name: PROD-Public-SubnetB
+  PrivateSubnetA:
+   Description: Reference to our Private Subnet in Zone A
+   Value:
+    Ref: PrivateSubnetA
+   Export:
+    Name: PROD-Private-SubnetA     
+  PrivateSubnetB:
+   Description: Reference to our Private Subnet in Zone B
+   Value:
+    Ref: PrivateSubnetB
+   Export:
+    Name: PROD-Private-SubnetB       
+
+        

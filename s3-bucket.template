@@ -1,0 +1,12 @@
+Parameters:
+  BucketNameParameter:
+    Type: String
+    Default: udacity-cloud-devops-nanodegree
+    Description: S3 Bucket Name you want to create.
+Resources:
+  s3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: PublicRead
+      BucketName:
+        Ref: BucketNameParameter
